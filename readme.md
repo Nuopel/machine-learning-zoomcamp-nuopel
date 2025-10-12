@@ -19,20 +19,20 @@ The ML Zoomcamp is a comprehensive machine learning course that covers everythin
 ## 📋 Progress Tracker
 
 | Module | Topic                                 | Status | Deadline          |
-| ------ | ------------------------------------- | ------ | ----------------- |
-| 01     | Introduction to Machine Learning      | ✅      | 30 Sep 2025 01:00 |
-| 02     | Machine Learning for Regression       | ✅      | 7 Oct 2025 01:00  |
-| 03     | Machine Learning for Classification   | ⏳      | 14 Oct 2025 01:00 |
-| 04     | Evaluation Metrics for Classification | ❌      | 21 Oct 2025 01:00 |
-| 05     | Deploying Machine Learning Models     | ❌      | 28 Oct 2025 00:00 |
-| 06     | Decision Trees and Ensemble Learning  | ❌      | 4 Nov 2025 00:00  |
-| 07     | **Midterm Project**                   | ❌      | TBD               |
-| 08     | Neural Networks and Deep Learning     | ❌      | 2 Dec 2025 00:00  |
-| 09     | Serverless Deep Learning              | ❌      | 9 Dec 2025 00:00  |
-| 10     | Kubernetes and TensorFlow Serving     | ❌      | 16 Dec 2025 00:00 |
-| 11     | **Capstone Project 1**                | ❌      | TBD               |
-| 12     | **Capstone Project 2**                | ❌      | TBD               |
-| 13     | **Article** (Optional)                | ❌      | TBD               |
+| ------ | ------------------------------------- | ----- | ----------------- |
+| 01     | Introduction to Machine Learning      | ✅     | 30 Sep 2025 01:00 |
+| 02     | Machine Learning for Regression       | ✅     | 7 Oct 2025 01:00  |
+| 03     | Machine Learning for Classification   | ✅     | 14 Oct 2025 01:00 |
+| 04     | Evaluation Metrics for Classification | ⏳     | 21 Oct 2025 01:00 |
+| 05     | Deploying Machine Learning Models     | ❌     | 28 Oct 2025 00:00 |
+| 06     | Decision Trees and Ensemble Learning  | ❌     | 4 Nov 2025 00:00  |
+| 07     | **Midterm Project**                   | ❌     | TBD               |
+| 08     | Neural Networks and Deep Learning     | ❌     | 2 Dec 2025 00:00  |
+| 09     | Serverless Deep Learning              | ❌     | 9 Dec 2025 00:00  |
+| 10     | Kubernetes and TensorFlow Serving     | ❌     | 16 Dec 2025 00:00 |
+| 11     | **Capstone Project 1**                | ❌     | TBD               |
+| 12     | **Capstone Project 2**                | ❌     | TBD               |
+| 13     | **Article** (Optional)                | ❌     | TBD               |
 
 **Legend:**
 
