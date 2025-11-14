@@ -248,8 +248,8 @@ Midterm/
 1. **Clone repository**
    
    ```bash
-   git clone <repo-url>
-   cd repo
+   git clone https://github.com/Nuopel/machine-learning-zoomcamp-nuopel/
+   cd machine-learning-zoomcamp-nuopel/Projects/Midterm
    ```
 
 2. **Create virtual environment**
