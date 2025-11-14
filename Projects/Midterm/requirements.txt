@@ -20,4 +20,6 @@ uvicorn
 
 # Utilities
 requests==2.31.0
-
+matplotlib
+seaborn
+pingouin

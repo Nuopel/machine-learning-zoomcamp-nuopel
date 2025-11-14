@@ -188,8 +188,8 @@ if __name__ == "__main__":
     print("\n" + "=" * 60)
     print("🍷 Starting Wine Rating Prediction API")
     print("=" * 60)
-    print("\n📍 API running at: http://0.0.0.0:9696")
-    print("📖 Docs available at: http://0.0.0.0:9696/docs")
+    print("\n📍 API running at: http://0.0.0.0:7860")
+    print("📖 Docs available at: http://0.0.0.0:7860/docs")
     print("\n" + "=" * 60 + "\n")
 
-    uvicorn.run(app, host="0.0.0.0", port=9696)
+    uvicorn.run(app, host="0.0.0.0", port=7860)

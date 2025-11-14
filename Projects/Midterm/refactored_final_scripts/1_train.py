@@ -465,13 +465,13 @@ for name, model in models.items():
 print(f"✅ All models saved to: ./models/trained/*_te.pkl")
 
 # Save results
-results_df.to_csv('../results/model_comparison_te.csv', index=False)
-print(f"✅ Results saved: ../results/model_comparison_te.csv")
+results_df.to_csv('./results/model_comparison_te.csv', index=False)
+print(f"✅ Results saved: ./results/model_comparison_te.csv")
 
 # Save grid search results
 for name, cv_results in grid_results.items():
-    pd.DataFrame(cv_results).to_csv(f'../results/{name}_grid_search_results.csv', index=False)
-print(f"✅ Grid search results saved: ../results/*_grid_search_results.csv")
+    pd.DataFrame(cv_results).to_csv(f'./results/{name}_grid_search_results.csv', index=False)
+print(f"✅ Grid search results saved: ./results/*_grid_search_results.csv")
 
 # Save metadata
 metadata_output = {
@@ -488,9 +488,9 @@ metadata_output = {
     'training_date': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
 }
 
-with open('../results/model_metadata_te.json', 'w') as f:
+with open('./results/model_metadata_te.json', 'w') as f:
     json.dump(metadata_output, f, indent=2)
-print(f"✅ Metadata saved: ../results/model_metadata_te.json")
+print(f"✅ Metadata saved: ./results/model_metadata_te.json")
 
 # ============================================================================
 # 8. SUMMARY
@@ -533,13 +533,13 @@ for name, model in models.items():
 print(f"✅ All models saved to: ./models/trained/*_te.pkl")
 
 # Save results
-results_df.to_csv('../results/model_comparison_te.csv', index=False)
-print(f"✅ Results saved: ../results/model_comparison_te.csv")
+results_df.to_csv('./results/model_comparison_te.csv', index=False)
+print(f"✅ Results saved: ./results/model_comparison_te.csv")
 
 # Save grid search results
 for name, cv_results in grid_results.items():
-    pd.DataFrame(cv_results).to_csv(f'../results/{name}_grid_search_results.csv', index=False)
-print(f"✅ Grid search results saved: ../results/*_grid_search_results.csv")
+    pd.DataFrame(cv_results).to_csv(f'./results/{name}_grid_search_results.csv', index=False)
+print(f"✅ Grid search results saved: ./results/*_grid_search_results.csv")
 
 # Save metadata
 metadata_output = {
@@ -556,9 +556,9 @@ metadata_output = {
     'training_date': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
 }
 
-with open('../results/model_metadata_te.json', 'w') as f:
+with open('./results/model_metadata_te.json', 'w') as f:
     json.dump(metadata_output, f, indent=2)
-print(f"✅ Metadata saved: ../results/model_metadata_te.json")
+print(f"✅ Metadata saved: ./results/model_metadata_te.json")
 
 # ============================================================================
 # 8. SUMMARY
