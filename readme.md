@@ -19,7 +19,7 @@ The ML Zoomcamp is a comprehensive machine learning course that covers everythin
 ## 📋 Progress Tracker
 
 | Module | Topic                                 | Status | Deadline          |
-| ------ | ------------------------------------- |  | ----------------- |
+| ------ | ------------------------------------- | - | ----------------- |
 | 01     | Introduction to Machine Learning      | ✅ | 30 Sep 2025 01:00 |
 | 02     | Machine Learning for Regression       | ✅ | 7 Oct 2025 01:00  |
 | 03     | Machine Learning for Classification   | ✅ | 14 Oct 2025 01:00 |
