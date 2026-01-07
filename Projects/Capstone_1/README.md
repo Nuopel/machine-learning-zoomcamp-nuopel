@@ -34,13 +34,7 @@ Capstone_1/
 │   ├── Lot0_minimal_ts_explanation.md
 │   ├── Lot1_Data_analysis_and_cleaning.ipynb
 │   ├── Lot2_EDA_price.ipynb
-│   ├── Lot3_Modelling_te.ipynb
-│   ├── Lot3_Modelling_te.py
-│   └── Lot3_Modelling_2.py
-├── Lot1_database_scrap/
-│   └── tout_le_hp/
-│       ├── A6_clean_selected_db.py
-│       └── A7_refine_selected_db.py
+│   ├── Lot3_Modelling.ipynb
 ├── requirements.txt
 ├── pyproject.toml
 └── Dockerfile
@@ -51,9 +45,9 @@ Capstone_1/
 - `notebooks/Lot0_minimal_ts_explanation.md` — physics background (minimal T/S set).
 - `notebooks/Lot1_Data_analysis_and_cleaning.ipynb` — quick overview of features, missing values, and column roles.
 - `notebooks/Lot2_EDA_price.ipynb` — EDA: price distribution, correlation, and feature relationships.
-- `notebooks/Lot3_Modelling_te.ipynb` — model tuning + evaluation (Ridge, RF, XGBoost).
-- `notebooks/Lot3_Modelling_te.py` — baseline training script.
-- `notebooks/Lot3_Modelling_2.py` — full pipeline with grouped split + target encoding.
+- `notebooks/Lot3_Modelling.ipynb` — model tuning + evaluation (Ridge, RF, XGBoost).
+- `notebooks/Lot4_websevice_predict.py` — generate a sever ready to run the best model
+- `notebooks/Lot4_websevice_test.ipynb` — test the server with few prediction
 
 ## Quick start (local)
 
@@ -63,20 +57,30 @@ source venv/bin/activate
 pip install -r requirements.txt
 ```
 
-Run notebooks:
+Run the different script in refactored_final_scripts to reproduce the result
 
-```bash
-jupyter notebook notebooks/
-```
+notebooks/ contain more detailed 
 
-Train via script:
 
-```bash
-python notebooks/Lot3_Modelling_te.py
-```
 
-## Notes
+## 🐳 Docker Deployment
 
-- Price is right-skewed; models use `log1p(price)` for stability.
-- Some columns are intentionally dropped due to high missingness or low signal (see `Lot2_EDA_price.ipynb`).
+### Build & Run Locally
 
+1. **Build Docker image**
+   
+   ```bash
+   docker build -f refactored_final_scripts/Dockerfile -t speaker-rating-api:latest .
+   ```
+
+2. **Run container**
+   
+   ```bash
+   docker run -p 7860:7860 wine-rating-api:latest
+   ```
+
+3. **Test the API**
+   
+   Run 4_test_server_predict.py
+   
+   ---
