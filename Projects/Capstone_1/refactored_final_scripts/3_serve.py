@@ -1,226 +1,276 @@
 """
-Test script for Speaker Price Prediction API (LOT-003)
+Speaker Price Prediction API (LOT-003: LOG + HYBRID TE)
 ======================================================
-- Health check + schema
-- Single prediction + batch prediction
-- Compares predicted price (€) against true price from your CSV rows
+FastAPI service for predicting speaker prices (€) using:
+- A trained regression model on y = log1p(price)
+- A smoothed target encoder fit on TRAIN ONLY using price in € (hybrid TE)
+
+This API:
+- loads ./models_log_hybrid/trained/best_model.pkl
+- loads ./models_log_hybrid/encoders/target_encoder.pkl
+- expects raw features (including categoricals) as input
+- applies TE + numeric coercion + median imputation (train medians saved separately)
+- outputs predicted price in euros
+
+IMPORTANT:
+- During training, you computed medians from X_train AFTER target encoding.
+  To reproduce inference correctly, we need those medians at serving time.
+  So: export them once (recommended) or compute from a saved "feature template".
 """
 
-import requests
+import os
 import json
+import pickle
+from typing import Any, Dict, List, Optional
+
 import numpy as np
+import pandas as pd
 
-# API endpoint
-BASE_URL = "http://127.0.0.1:7860"
+from fastapi import FastAPI, HTTPException
+from pydantic import BaseModel, Field
 
+import joblib
+import uvicorn
 
-def pretty(x):
-    return json.dumps(x, indent=2, ensure_ascii=False)
+from smoothed_target_encoder import SmoothedTargetEncoder  # needed for pickle.load
+# ============================================================
+# ✅ Paths (match your training outputs)
+# ============================================================
+MODEL_PATH = "./models_log_hybrid/trained/best_model.pkl"
+ENCODER_PATH = "./models_log_hybrid/encoders/target_encoder.pkl"
+METADATA_PATH = "./results_log_hybrid/metadata.json"
 
-
-# ✅ Real header from your CSV
-CSV_HEADER = [
-    "row_id",
-    "price",
-    "spec_general_marque",
-    "spec_general_type_produit",
-    "spec_general_reference",
-    "spec_informations_impedance_nominale",
-    "spec_forme_materiaux_systeme_magnetique",
-    "spec_forme_materiaux_forme_facade",
-    "spec_parametres_petits_signaux_qts",
-    "spec_parametres_petits_signaux_qes",
-    "spec_parametres_petits_signaux_qms",
-    "spec_forme_materiaux_materiau_saladier",
-    "spec_forme_materiaux_materiau_suspension",
-    "spec_forme_materiaux_support_bobine",
-    "spec_forme_materiaux_fil_bobine",
-    "spec_forme_materiaux_materiau_dome",
-    "spec_informations_puissance_nominale_w",
-    "spec_informations_sensibilite_fabricant_db",
-    "spec_parametres_petits_signaux_fs_hz",
-    "spec_donnees_poids_kg",
-    "spec_parametres_fondamentaux_re_ohm",
-    "spec_donnees_xmax_mm",
-    "spec_parametres_fondamentaux_mms_gr",
-    "spec_donnees_ebp_hz",
-    "spec_parametres_petits_signaux_vas_l",
-    "spec_donnees_rendement_calcule_pct",
-    "spec_parametres_fondamentaux_le_mh",
-    "spec_parametres_fondamentaux_sd_cm2",
-    "spec_parametres_fondamentaux_bl_t_m",
-    "spec_dimensions_diametre_systeme_magnetique_mm",
-    "spec_informations_puissance_max_w",
-    "spec_dimensions_hauteur_entrefer_mm",
-    "spec_dimensions_hauteur_bobinage_mm",
-    "spec_donnees_rendement_pct",
-]
-
-TARGET_COL = "price"
-GROUP_COL = "spec_general_reference"
+# Strongly recommended: save this during training (see note below)
+MEDIANS_PATH = "./models_log_hybrid/encoders/train_medians.json"
 
 
-def _coerce_value(v: str):
-    """Convert numeric strings to float, keep categoricals as str, empty->None."""
-    v = v.strip()
-    if v == "":
+# ============================================================
+# ✅ Load model / encoder / metadata / medians
+# ============================================================
+def _safe_load_pickle(path: str):
+    if not os.path.exists(path):
         return None
-    try:
-        return float(v)
-    except ValueError:
-        return v
+    with open(path, "rb") as f:
+        return pickle.load(f)
+
+def _safe_load_json(path: str):
+    if not os.path.exists(path):
+        return None
+    with open(path, "r") as f:
+        return json.load(f)
+
+try:
+    model = joblib.load(MODEL_PATH)
+    print("✅ Speaker model loaded")
+except FileNotFoundError:
+    print(f"⚠️ Model not found: {MODEL_PATH}")
+    model = None
+
+try:
+    encoder = _safe_load_pickle(ENCODER_PATH)
+    print("✅ Target encoder loaded")
+except FileNotFoundError:
+    print(f"⚠️ Encoder not found: {ENCODER_PATH}")
+    encoder = None
+
+metadata = _safe_load_json(METADATA_PATH) or {}
+feature_names: List[str] = metadata.get("features", [])
+
+train_medians: Optional[Dict[str, float]] = _safe_load_json(MEDIANS_PATH)
+
+if train_medians is None:
+    # We can still run if there are no missing values, but it's unsafe.
+    print(f"⚠️ Train medians not found: {MEDIANS_PATH} (imputation may fail)")
 
 
-def row_to_payload_and_truth(row_csv: str):
+# ============================================================
+# 🔧 Helpers (same logic as training)
+# ============================================================
+def predict_to_euros(model_obj, X_np: np.ndarray, y_is_log: bool = True) -> np.ndarray:
+    pred = model_obj.predict(X_np)
+    if y_is_log:
+        # optional safety clip to avoid exp overflow
+        pred = np.clip(pred, -20.0, 20.0)
+        pred = np.expm1(pred)
+    pred = np.clip(pred, 0.0, None)
+    return pred
+
+
+def preprocess_input(payload: Dict[str, Any]) -> np.ndarray:
     """
-    Convert a CSV row string to:
-    - payload dict (features only)
-    - true price (float)
+    Preprocess ONE sample:
+    - create df with one row
+    - apply encoder.transform (it expects the raw categoricals)
+    - coerce numerics
+    - align columns to training feature_names
+    - fill missing with train medians
     """
-    parts = [p.strip() for p in row_csv.split(",")]
+    if encoder is None:
+        raise HTTPException(status_code=503, detail="Encoder not loaded")
+    if model is None:
+        raise HTTPException(status_code=503, detail="Model not loaded")
+    if not feature_names:
+        raise HTTPException(status_code=503, detail="metadata.json missing 'features' list")
+    if train_medians is None:
+        raise HTTPException(
+            status_code=503,
+            detail=(
+                "Train medians not loaded. Save them during training to ensure consistent imputation "
+                f"(expected at {MEDIANS_PATH})."
+            ),
+        )
 
-    if len(parts) != len(CSV_HEADER):
-        raise ValueError(f"Row has {len(parts)} fields but header has {len(CSV_HEADER)} columns")
+    df = pd.DataFrame([payload])
 
-    row = {k: _coerce_value(v) for k, v in zip(CSV_HEADER, parts)}
+    # Apply the exact same TE logic as training
+    df_te = encoder.transform(df)
 
-    true_price = float(row[TARGET_COL]) if row.get(TARGET_COL) is not None else None
+    # Coerce numeric
+    for c in df_te.columns:
+        df_te[c] = pd.to_numeric(df_te[c], errors="coerce")
 
-    # Build payload: drop target + group (training dropped them)
-    payload = dict(row)
-    payload.pop(TARGET_COL, None)
-    payload.pop(GROUP_COL, None)
+    # Align to training features (add missing columns as NaN)
+    for c in feature_names:
+        if c not in df_te.columns:
+            df_te[c] = np.nan
 
-    return payload, true_price
+    df_te = df_te[feature_names]
 
+    # Fill NA with train medians
+    med = pd.Series(train_medians)
+    df_te = df_te.fillna(med)
 
-def test_health_check():
-    print("\n🔍 Testing health check...")
-    r = requests.get(f"{BASE_URL}/", timeout=10)
-    print(f"Status: {r.status_code}")
-    if r.status_code == 200:
-        print(pretty(r.json()))
-    else:
-        print(r.text[:400])
-
-
-def test_schema():
-    print("\n📐 Testing /schema endpoint...")
-    r = requests.get(f"{BASE_URL}/schema", timeout=10)
-    print(f"Status: {r.status_code}")
-    if r.status_code == 200:
-        data = r.json()
-        feats = data.get("model_features_after_encoding", [])
-        print(f"n_features_after_encoding = {len(feats)}")
-    else:
-        print(r.text[:400])
-
-
-def test_single_prediction(payload: dict, true_price: float | None = None):
-    print("\n🔊 Testing single prediction...")
-    r = requests.post(f"{BASE_URL}/predict", json=payload, timeout=30)
-    print(f"Status: {r.status_code}")
-
-    if r.status_code != 200:
-        print("Error:", r.text[:800])
-        return
-
-    res = r.json()
-    pred = float(res["predicted_price_eur"])
-
-    print("\n✨ Prediction Result:")
-    print(f"   Predicted Price (€): {pred:.2f}")
-
-    if true_price is not None:
-        abs_err = abs(pred - true_price)
-        rel_err = abs_err / max(true_price, 1e-8)
-        print(f"   True Price (€):      {true_price:.2f}")
-        print(f"   Abs Error (€):       {abs_err:.2f}")
-        print(f"   Rel Error (%):       {100*rel_err:.2f}%")
+    return df_te.to_numpy(dtype=float)
 
 
-def test_batch_prediction(payloads: list[dict], true_prices: list[float | None]):
-    print("\n🔊🔊 Testing batch prediction...")
-    r = requests.post(f"{BASE_URL}/predict_batch", json=payloads, timeout=30)
-    print(f"Status: {r.status_code}")
+def preprocess_batch(payloads: List[Dict[str, Any]]) -> np.ndarray:
+    """
+    Preprocess a batch:
+    - df of N rows
+    - encode once for speed
+    - align + impute
+    """
+    if encoder is None:
+        raise HTTPException(status_code=503, detail="Encoder not loaded")
+    if model is None:
+        raise HTTPException(status_code=503, detail="Model not loaded")
+    if not feature_names:
+        raise HTTPException(status_code=503, detail="metadata.json missing 'features' list")
+    if train_medians is None:
+        raise HTTPException(
+            status_code=503,
+            detail=(
+                "Train medians not loaded. Save them during training to ensure consistent imputation "
+                f"(expected at {MEDIANS_PATH})."
+            ),
+        )
 
-    if r.status_code != 200:
-        print("Error:", r.text[:800])
-        return
+    df = pd.DataFrame(payloads)
+    df_te = encoder.transform(df)
 
-    res = r.json()
-    preds = [float(x["predicted_price_eur"]) for x in res]
+    for c in df_te.columns:
+        df_te[c] = pd.to_numeric(df_te[c], errors="coerce")
 
-    print(f"\n✨ Batch Predictions ({len(preds)} speakers):")
-    for i, (pred, y) in enumerate(zip(preds, true_prices), 1):
-        if y is None:
-            print(f"   Speaker {i}: pred=€{pred:.2f}")
-            continue
-        abs_err = abs(pred - y)
-        rel_err = abs_err / max(y, 1e-8)
-        print(f"   Speaker {i}: true=€{y:.2f} | pred=€{pred:.2f} | abs=€{abs_err:.2f} | rel={100*rel_err:.2f}%")
+    for c in feature_names:
+        if c not in df_te.columns:
+            df_te[c] = np.nan
+    df_te = df_te[feature_names]
 
-    # quick aggregate
-    ys = np.array([y for y in true_prices if y is not None], dtype=float)
-    ps = np.array([p for p, y in zip(preds, true_prices) if y is not None], dtype=float)
-    if len(ys) > 0:
-        mae = float(np.mean(np.abs(ps - ys)))
-        rmse = float(np.sqrt(np.mean((ps - ys) ** 2)))
-        print(f"\n   Summary on provided rows: MAE=€{mae:.2f} | RMSE=€{rmse:.2f}")
+    med = pd.Series(train_medians)
+    df_te = df_te.fillna(med)
+
+    return df_te.to_numpy(dtype=float)
 
 
-def test_invalid_input():
-    print("\n❌ Testing invalid input handling...")
-    invalid = {"foo": "bar"}  # wrong input on purpose
-    r = requests.post(f"{BASE_URL}/predict", json=invalid, timeout=30)
-    print(f"Status: {r.status_code}")
-    print("Response:", r.text[:400])
+# ============================================================
+# 🧩 Input & Output Models
+# ============================================================
+class SpeakerFeatures(BaseModel):
+    """
+    Flexible schema:
+    - we accept ANY extra fields because your dataset has many columns.
+    - you must provide at least the columns your trained model expects.
+    """
+    model_config = {"extra": "allow"}
+
+class PredictResponse(BaseModel):
+    predicted_price_eur: float = Field(..., description="Predicted speaker price in euros (€)")
 
 
-if __name__ == "__main__":
-    print("=" * 60)
-    print("🧪 Speaker Price API Test Suite")
-    print(f"Testing: {BASE_URL}")
-    print("=" * 60)
+# ============================================================
+# 🚀 FastAPI App
+# ============================================================
+app = FastAPI(
+    title="Speaker Price Prediction API",
+    description="Predict speaker prices (€) from technical specs and encoded categorical features (LOT-003)",
+    version="1.0.0",
+)
 
-    # Your pasted example rows
-    ROWS = [
-        "1139,200.0,PHL Audio,Haut parleur a cone,4071NdS-19,8 ohm,Neodymium,Non cylindrique,0.12,0.12,4.99,Aluminium,,,,,500.0,98.5,46.0,6.2,5.0,6.0,69.0,383.0,59.0,4.6,1.29,493.0,28.6,138.0,,12.0,17.5,4.5",
-        "165,754.0,B&C Speakers,Haut parleur a cone,18IPAL,2 ohm,Neodymium,Cylindrique,0.14,0.14,4.2,Aluminium,,Fibre de verre,Aluminium,,1700.0,97.0,32.0,17.6,1.3,20.0,330.0,229.0,164.0,3.69,0.65,1210.0,24.5,,,12.0,44.0,3.3",
-        "497,309.0,Eighteen Sound,Haut parleur a cone,12ND610,8 ohm,Neodymium,Cylindrique,0.14,0.15,4.3,,,,,,450.0,102.0,46.0,3.4,5.9,3.5,49.0,307.0,94.4,5.89,1.17,531.0,24.0,,700.0,,,",
-        "88,238.0,B&C Speakers,Haut parleur a cone,12NW76,4 ohm,Neodymium,Cylindrique,0.15,0.15,3.75,Aluminium,,Fibre de verre,Cuivre,,500.0,98.0,43.0,4.9,3.4,8.0,82.0,287.0,64.5,3.29,1.1,522.0,22.0,,,11.0,19.0,3.2",
-        "945,911.0,LaVoce,Haut parleur a cone,SAN184.50iP,8 ohm,Neodymium,Cylindrique,0.15,0.15,6.06,Aluminium,Tissu,Fibre de verre,CCAW (alu recouvert de cuivre),,1700.0,98.0,34.0,15.1,1.37,19.25,312.9,227.0,145.4,3.66,0.4,1225.0,24.85,165.0,3400.0,13.0,45.0,3.8",
-        "89,226.0,B&C Speakers,Haut parleur a cone,12NW76,8 ohm,Neodymium,Cylindrique,0.16,0.17,3.7,Aluminium,,Fibre de verre,Cuivre,,500.0,98.5,40.0,4.9,5.3,8.0,77.0,235.0,76.0,2.75,1.25,522.0,25.5,,,11.0,19.0,2.8",
-        "119,456.0,B&C Speakers,Haut parleur a cone,15DS115,4 ohm,Neodymium,Cylindrique,0.16,0.17,4.7,Aluminium,,Fibre de verre,Aluminium,,1600.0,96.0,34.0,11.6,3.2,16.5,273.0,200.0,83.0,1.85,3.2,855.0,33.6,,,14.0,40.0,1.9",
-    ]
 
+# ============================================================
+# 🌍 Endpoints
+# ============================================================
+@app.get("/")
+def root():
+    return {
+        "status": "healthy",
+        "service": "Speaker Price Prediction API",
+        "model_loaded": model is not None,
+        "encoder_loaded": encoder is not None,
+        "metadata_loaded": bool(feature_names),
+        "medians_loaded": train_medians is not None,
+        "n_features_expected": len(feature_names),
+        "best_model": metadata.get("best_model"),
+    }
+
+
+@app.get("/schema")
+def schema():
+    """
+    Returns the list of expected input columns (raw + post-TE depends),
+    but for serving we primarily need raw columns so encoder can do its job.
+    Since your encoder drops categoricals and adds __te columns, the reliable
+    thing to expose is the FINAL feature list used by the model.
+    """
+    if not feature_names:
+        raise HTTPException(status_code=503, detail="metadata.json missing 'features'")
+    return {"model_features_after_encoding": feature_names}
+
+
+@app.post("/predict", response_model=PredictResponse)
+def predict_one(speaker: SpeakerFeatures) -> PredictResponse:
     try:
-        test_health_check()
-        test_schema()
-
-        payloads = []
-        truths = []
-        for r in ROWS:
-            payload, y = row_to_payload_and_truth(r)
-            payloads.append(payload)
-            truths.append(y)
-
-        # single
-        test_single_prediction(payloads[0], truths[0])
-
-        # batch
-        test_batch_prediction(payloads, truths)
-
-        # invalid
-        test_invalid_input()
-
-        print("\n" + "=" * 60)
-        print("✅ All tests completed!")
-        print("=" * 60)
-
-    except requests.exceptions.ConnectionError as e:
-        print("\n❌ Error: Could not connect to API")
-        print(f"Make sure the API is running on {BASE_URL}")
-        print(f"Error details: {e}")
+        X = preprocess_input(speaker.model_dump())
+        yhat = float(predict_to_euros(model, X, y_is_log=True)[0])
+        return PredictResponse(predicted_price_eur=round(yhat, 2))
+    except HTTPException:
+        raise
     except Exception as e:
-        print(f"\n❌ Unexpected error: {e}")
+        raise HTTPException(status_code=500, detail=f"Prediction error: {str(e)}")
+
+
+@app.post("/predict_batch", response_model=List[PredictResponse])
+def predict_batch(speakers: List[SpeakerFeatures]) -> List[PredictResponse]:
+    try:
+        payloads = [s.model_dump() for s in speakers]
+        X = preprocess_batch(payloads)
+        preds = predict_to_euros(model, X, y_is_log=True)
+        return [PredictResponse(predicted_price_eur=round(float(p), 2)) for p in preds]
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Batch prediction error: {str(e)}")
+
+
+# ============================================================
+# 🏁 Run server
+# ============================================================
+if __name__ == "__main__":
+    print("\n" + "=" * 60)
+    print("🔊 Starting Speaker Price Prediction API (LOT-003)")
+    print("=" * 60)
+    print("\n📍 API running at: http://0.0.0.0:7860")
+    print("📖 Docs available at: http://0.0.0.0:7860/docs")
+    print("\n" + "=" * 60 + "\n")
+
+    uvicorn.run(app, host="0.0.0.0", port=7860)
