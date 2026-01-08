@@ -55,13 +55,7 @@ Capstone_1/
 │   ├── smoothed_target_encoder.py
 │   ├── Dockerfile
 │   ├── pyproject.toml
-│   └── results_log_hybrid/
-│       ├── metadata.json
-│       ├── model_comparison.csv
-│       └── test_binwise_errors.csv
 ├── requirements.txt
-├── pyproject.toml
-└── Dockerfile
 ```
 
 ## Notebooks guide
