@@ -27,7 +27,7 @@ The  T/S set parameters describe the physical behavior of the driver, and most o
 I then selected a few additional columns that might correlate with price, such as efficiency, nominal/max power, and magnet material. 
 
 For exemple the magnet type is expected to matter (ferrite vs. neodymium, for example), while other fields are exploratory. One of my curiosities is whether price can cluster by brand when the physical parameters are similar.
-![img_2.png](img_2.png)
+![img_2.png](./Datas/img_2.png)
 Final dataset: `Datas/speaker_db_selected_refined.csv`
 
 
