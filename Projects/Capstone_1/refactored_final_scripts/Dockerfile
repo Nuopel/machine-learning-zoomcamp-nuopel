@@ -20,8 +20,8 @@ COPY ./3_serve.py ./predict.py
 COPY ./smoothed_target_encoder.py ./smoothed_target_encoder.py
 COPY ./models_log_hybrid/encoders/target_encoder.pkl ./models_log_hybrid/encoders/target_encoder.pkl
 COPY ./models_log_hybrid/trained/best_model.pkl ./models_log_hybrid/trained/best_model.pkl
-COPY ./models_log_hybrid/encoders/train_medians.json ./models_log_hybrid/encoders/train_medians.json
 COPY ./results_log_hybrid/metadata.json ./results_log_hybrid/metadata.json
+COPY ./models_log_hybrid/encoders/train_medians.json ./models_log_hybrid/encoders/train_medians.json
 
 # Expose port
 EXPOSE 7860

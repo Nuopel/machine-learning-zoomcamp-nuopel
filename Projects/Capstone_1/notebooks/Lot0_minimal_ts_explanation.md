@@ -2,7 +2,7 @@
 
 This note gives the minimal, physically grounded model to simulate a direct-radiator loudspeaker at low frequency using Thiele-Small parameters. It connects the 2nd-order band-pass transfer function to the smallest useful T/S parameter set, and includes basic efficiency/sensitivity links.
 
-![](./2025-12-25-21-49-21-image.png)
+![](../Datas/2025-12-25-21-49-21-image.png)
 
 Fig. 1 : Cross-sectional sketch of a direct-radiator loudspeaker assumed to be mounted in an infinite baffle. ['Acoustics: sound fields, transducers and vibration' Beranek & Mellow, 2012, p278]
 
@@ -29,11 +29,9 @@ $$
 \tilde x_c = \frac{\tilde u_c}{j\,2\pi f}
 $$
 
-![](.//2025-12-25-21-52-10-image.png)
+![](../Datas/2025-12-25-21-52-10-image.png)
 
-Fig. 2 : Normalized voice-coil displacement, velocity, and acceleration.
-
-The solid line is for $Q _ { T S } = 1 / \sqrt { 2 }$ . The dashed line is for $Q _ { T S } = 2$ . ['Acoustics: sound fields, transducers and vibration' Beranek & Mellow, 2012, p285]
+Fig. 2 : Normalized voice-coil displacement, velocity, and acceleration. The solid line is for $Q _ { T S } = 1 / \sqrt { 2 }$ . The dashed line is for $Q _ { T S } = 2$ . ['Acoustics: sound fields, transducers and vibration' Beranek & Mellow, 2012, p285]
 
 ## 2) Minimal T/S parameter set and relations
 
