@@ -269,6 +269,7 @@ target_H(t) = 1 if max(Kp[t+1 : t+H]) ≥ 5 else 0
 
 
 ![img_.png](./Data/img/img_3.png)
+
   Solar‑wind drivers are non‑Gaussian and heavy‑tailed: Bz/By are centered near 0 with rare extreme
   excursions, magnetic field magnitude is right‑skewed, and speed/density/temperature span orders of
   magnitude. Storms live in the tails, so scaling and robust handling of extremes are essential.
@@ -278,11 +279,13 @@ target_H(t) = 1 if max(Kp[t+1 : t+H]) ≥ 5 else 0
 
 ![img_.png](./Data/img/img_4.png)
 ![img_.png](./Data/img/img_5.png)
+
   Instantaneous relationships show physically consistent but moderate associations between Kp and key drivers
   (Bz, speed), with clear inter‑driver collinearity. No single driver explains Kp by itself → motivates
   multivariate and lagged features.
 
 ![img_.png](./Data/img/img_6.png)
+
  A single strong driver can reach high short‑horizon AUC (~0.94 at 3h) but decays steadily with horizon
   (~0.78 by 24h). Signal remains above chance even at 24h, suggesting regime persistence rather than
   instantaneous triggering.
@@ -315,6 +318,7 @@ target_H(t) = 1 if max(Kp[t+1 : t+H]) ≥ 5 else 0
   Hard constraints:
   No future leakage, no history >24h, no target‑driven feature selection. All features are constructed from
   past and present measurements only.
+
 ---
 
 ## Notebooks (Workflow)
