@@ -229,6 +229,9 @@ Those two are obtained from running `A2_FeatureEngineering.ipynb` computing `Dat
   ---
 ## Targets
 
+A common rule of thumb: Kp ≥ 5 indicates geomagnetic storm conditions, which often correspond to aurora
+  visibility beyond the usual high‑latitude regions. That’s why Kp ≥ 5 is widely used as an “auroral activity”
+  threshold.
 
 **Target definition (per horizon H):**
 
@@ -239,9 +242,7 @@ target_H(t) = 1 if max(Kp[t+1 : t+H]) ≥ 5 else 0
 **Horizons used:** 3h, 6h, 12h, 24h, 48h, 72h, 96h
 
 
-A common rule of thumb: Kp ≥ 5 indicates geomagnetic storm conditions, which often correspond to aurora
-  visibility beyond the usual high‑latitude regions. That’s why Kp ≥ 5 is widely used as an “auroral activity”
-  threshold.
+
 
   Stronger thresholds:
 
