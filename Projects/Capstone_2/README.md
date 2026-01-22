@@ -62,10 +62,10 @@ This project investigates whether **supervised machine-learning models**, traine
 * **`Notebooks/`**
   Step-by-step development of the project: data cleaning, exploratory analysis, feature engineering, baseline models, tuning, and deep-learning experiments. This folder documents the **analysis workflow and reasoning** behind the final models.
 
-* **`aurora_final_scripts/`**
+* **`aurora_ML_final_scripts/`**
   Refactored, production-oriented **machine-learning pipeline** (training, prediction, serving, testing). This is the **reference implementation** used for deployment and inference.
 
-* **`aurora_dl_scripts/`**
+* **`aurora_DL_final_scripts/`**
   Refactored **deep-learning pipeline**, kept mainly for comparison and protocol validation. It mirrors the ML structure but did not provide significant performance gains.
 
 * **`pyproject.toml` / `uv.lock`**
@@ -132,7 +132,7 @@ jupyter notebook Notebooks/A0_clean_merge_dataset.ipynb
 2. **Train a model (ML)**
 
 ```bash
-cd aurora_final_scripts
+cd aurora_ML_final_scripts
 python 1_train.py
 ```
 
@@ -370,7 +370,7 @@ A common rule of thumb: Kp ≥ 5 indicates geomagnetic storm conditions, which o
 ## Deployment Scripts
 
 ### Classical ML API (RF/XGB)
-Folder: `aurora_final_scripts/`
+Folder: `aurora_ML_final_scripts/`
 
 - `1_train.py` → trains & saves per‑horizon models + metadata  
 - `2_predict.py` → offline predictions (recent night timestamps)  
@@ -379,7 +379,7 @@ Folder: `aurora_final_scripts/`
 - `Dockerfile` → minimal serving container
 
 ### Deep Learning API (LSTM/TCN)
-Folder: `aurora_dl_scripts/`
+Folder: `aurora_DL_final_scripts/`
 
 - `1_train.py` → trains LSTM+TCN, selects best type, saves ONNX  
 - `2_predict.py` → offline predictions (sequence window)  
@@ -392,10 +392,10 @@ Folder: `aurora_dl_scripts/`
 
 ## Docker (Aurora API)
 
-> Requires trained models in `aurora_final_scripts/models/` and metadata in `aurora_final_scripts/results/`.
+> Requires trained models in `aurora_ML_final_scripts/models/` and metadata in `aurora_ML_final_scripts/results/`.
 
 ```bash
-cd aurora_final_scripts
+cd aurora_ML_final_scripts
 docker build -t aurora-api .
 docker run -p 7860:7860 aurora-api
 ```
@@ -430,7 +430,7 @@ Then run:
 python 4_test_server_predict.py
 ```
 
-See `aurora_final_scripts/readme_Hugginface_deploy.txt` for details.
+See `aurora_ML_final_scripts/readme_Hugginface_deploy.txt` for details.
   ### Cloud Deployment Note
 
   Hugging Face model size limits mean only horizons 3h/6h/12h/24h are available in the HF deployment.
@@ -460,10 +460,8 @@ A more physically aligned future scope would therefore shift from:
 predicting Kp
 to:
 
-predicting auroral occurrence or probability directly, possibly conditioned on latitude, local time, and coupling parameters.
+predicting auroral occurrence or probability directly, possibly conditioned on latitude, local time, and weather parameters.
 
-This distinction is important and motivates future extensions of the analysis.
-Here is a **cleaned, consistent, and well-structured Markdown rewrite**, aligned with the tone of a technical README while keeping your light, motivating ending.
 
 ---
 
