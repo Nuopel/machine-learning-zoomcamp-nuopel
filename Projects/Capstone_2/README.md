@@ -108,13 +108,6 @@ Activate if needed:
 source .venv/bin/activate
 ```
 
----
-Here is a **clean, consistent, and copy-paste-ready Markdown rewrite**, with clearer structure, corrected formatting, and a more professional README tone.
-
----
-Sure — here is a **very compact, numbered, README-style version**, with the clarification embedded but kept minimal.
-
----
 
 ## Quickstart (Local)
 
@@ -169,7 +162,7 @@ Those two are obtained from running `A2_FeatureEngineering.ipynb` computing `Dat
   - `year, month, day, hour_start, hour_mid, days_start, days_mid, kp, ap, definitive_flag`
   - Kp is a discrete index (0–9 in thirds).
 
-  ---
+
 
   ### 2) OMNI2 Solar Wind / IMF (NASA OMNIWeb) — **drivers**
   **URL:** https://omniweb.gsfc.nasa.gov/form/dx1.html
@@ -202,7 +195,7 @@ Those two are obtained from running `A2_FeatureEngineering.ipynb` computing `Dat
 
   Missing values are flagged (e.g., 999.9 / 9999 / 9999999) and converted to NaN.
 
-  ---
+
 
   ### How to Download (Quick Steps)
 
@@ -212,11 +205,10 @@ Those two are obtained from running `A2_FeatureEngineering.ipynb` computing `Dat
      - Place it in: `Data/kp_ap.txt`
 
   2) **OMNI2 hourly data**
-     ### 2) OMNI2 hourly data (NASA OMNIWeb)
 
   URL: https://omniweb.gsfc.nasa.gov/form/dx1.html
 
-  What to download (hourly):
+  What to download :
   Select the following variables:
 
   - IMF Magnitude Avg (nT) → b_scalar
@@ -233,8 +225,8 @@ Those two are obtained from running `A2_FeatureEngineering.ipynb` computing `Dat
   - Resolution: hourly
   - Output file: save as
     Data/omni2_data_2.lst
-    (or Data/omni2_data.lst if you prefer)
 
+  ---
 ## Targets
 
 
