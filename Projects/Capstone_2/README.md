@@ -321,6 +321,25 @@ target_H(t) = 1 if max(Kp[t+1 : t+H]) ≥ 5 else 0
 
 ---
 
+
+## Results Summary 
+![img_.png](./Data/img/img_7.png)
+![img_.png](./Data/img/img_8.png)
+![img_.png](./Data/img/img_9.png)
+
+- Skill drops smoothly with lead time: ROC‑AUC/PR‑AUC are highest at 3–6h and degrade steadily toward 96h,
+    indicating limited long‑range information in L1 inputs.
+- Tuning helps, but modestly: RF/XGBoost tuning yields small but consistent gains over baseline, especially
+  mid‑to‑long horizons.
+- Deep learning is competitive, not dominant: TCN slightly outperforms LSTM and matches tuned tree models,
+  but improvements are incremental on the same tabular features.
+- Calibration deteriorates with horizon: Brier score rises as lead time increases; class‑weighted models
+  often look worse in calibration even if discrimination improves.
+- Persistence still matters: lagged Kp and sustained Bz/speed windows remain the most reliable signals,
+  reinforcing the physics‑driven feature design.
+
+---
+
 ## Notebooks (Workflow)
   - `Notebooks/A0_DataPreparation.ipynb`  
     Merge raw Kp + OMNI2, clean and resample to 3‑hour cadence, export master_3h.parquet.
@@ -343,24 +362,6 @@ target_H(t) = 1 if max(Kp[t+1 : t+H]) ≥ 5 else 0
 
 - `Notebooks/A5_DeepLearning.ipynb`  
   LSTM + TCN on sequences (lookback=24h), early stopping, compare vs baselines.
-
----
-
-## Results Summary 
-![img_.png](./Data/img/img_7.png)
-![img_.png](./Data/img/img_8.png)
-![img_.png](./Data/img/img_9.png)
-
-- Skill drops smoothly with lead time: ROC‑AUC/PR‑AUC are highest at 3–6h and degrade steadily toward 96h,
-    indicating limited long‑range information in L1 inputs.
-- Tuning helps, but modestly: RF/XGBoost tuning yields small but consistent gains over baseline, especially
-  mid‑to‑long horizons.
-- Deep learning is competitive, not dominant: TCN slightly outperforms LSTM and matches tuned tree models,
-  but improvements are incremental on the same tabular features.
-- Calibration deteriorates with horizon: Brier score rises as lead time increases; class‑weighted models
-  often look worse in calibration even if discrimination improves.
-- Persistence still matters: lagged Kp and sustained Bz/speed windows remain the most reliable signals,
-  reinforcing the physics‑driven feature design.
 
 ---
 
