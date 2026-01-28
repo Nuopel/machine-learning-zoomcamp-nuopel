@@ -32,7 +32,6 @@ The ML Zoomcamp is a comprehensive machine learning course that covers everythin
 | 10     | Kubernetes and TensorFlow Serving     | ✅   | 16 Dec 2025 00:00      |
 | 11     | **Capstone Project 1**                | ✅   | 6 January 2026 00:00   |
 | 12     | **Capstone Project 2**                | ✅   | 22 January 2026 00:00  |
-| 13     | **Article** (Optional)                | ❌  | TBD                    |
 
 **Legend:**
 
