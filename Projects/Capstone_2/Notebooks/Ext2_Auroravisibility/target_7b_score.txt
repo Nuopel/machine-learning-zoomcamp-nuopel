@@ -1,0 +1,190 @@
+Below is a concrete, **hourly-factor** formulation that matches your current table and yields a final score in the spirit of:
+
+[
+\text{VisibilityScore} = \text{Darkness} \~ \text{Cloud} \~ \text{Moon} \~ \text{AuroraActivity}
+]
+
+Because your data are hourly (`timestamp_utc`) with an `is_night` flag, the cleanest approach is:
+
+1. compute **hourly factors** for each row (only meaningful when `is_night=True`),
+2. aggregate to a **night-level score** (mean over night hours, or mean of the product).
+
+---
+
+# 1) Definitions and thresholds
+
+Let each row be an hour (t) at a given `location`.
+
+* (N(t) \in {0,1}) = `is_night` (1 if night, else 0)
+* Cloud cover (C(t)) = `cloud_cover` in % (0–100)
+* Kp (K(t)) = `kp`
+* Moon altitude (A(t)) = `moon_altitude_deg` (degrees)
+* Moon illumination (I(t)) = `moon_illumination` in ([0,1])
+
+Recommended constants (reasonable defaults you can tune later):
+
+* Moon altitude threshold: (h_0 = 0^\circ) (or (-6^\circ) if you want “glare” sensitivity)
+* Illumination gating threshold: (I_0 = 0.25)
+* Kp transition: (K_0 = 4) (start of meaningful aurora chance at many latitudes), (K_1 = 6) (strong activity)
+* Cloud softness exponent: (\beta = 1.5)
+
+---
+
+# 2) Hourly visibility factors
+
+## 2.1 Darkness factor (hourly)
+
+Given you already have `is_night`, keep it simple:
+
+[
+\boxed{
+D(t) = N(t)
+}
+]
+
+So (D(t)=1) at night hours and (0) otherwise.
+
+
+---
+
+## 2.2 Cloud factor (hourly)
+
+Clouds are the primary limiter; convert % to a visibility factor in ([0,1]).
+
+Interpretation:
+
+* 0% cloud → 1
+* 60% cloud → 0
+
+i think 60% of cloud limit a lot northen light seesighting already ?
+---
+Yes — given what you already have (**hourly Moon altitude and illumination**), the **best and simplest choice** is:
+
+> **Use the hourly Moon factor (F_{\text{moon}}(t)) directly and forget about explicit night-level (f_{\text{moon}}).**
+
+It is more faithful, easier to implement, and uses your data at full resolution.
+
+---
+
+## 2.3 Recommended Moon Factor
+
+### Constants
+
+* Altitude threshold:
+  [
+  h_0 = 0^\circ
+  ]
+* Illumination threshold:
+  [
+  I_0 = 0.25
+  ]
+
+---
+
+### Step 1 — Moon present indicator
+
+[
+M_{\text{up}}(t) =
+\begin{cases}
+1, & A(t) > h_0 \
+0, & A(t) \le h_0
+\end{cases}
+]
+
+---
+
+### Step 2 — Effective illumination
+
+[
+I_{\text{eff}}(t)=
+\begin{cases}
+0, & I(t) < I_0 \
+\frac{I(t) - I_0}{1 - I_0}, & I(t) \ge I_0
+\end{cases}
+]
+
+---
+
+### Step 3 — Hourly Moon factor
+
+[
+\boxed{
+F_{\text{moon}}(t) = 1 - M_{\text{up}}(t)\cdot I_{\text{eff}}(t)
+}
+]
+
+
+
+
+
+## 2.4 Aurora activity factor (hourly)
+
+You want a factor in ([0,1]) from Kp. Use a simple clamped linear mapping:
+
+[
+\boxed{
+F_{\text{kp}}(t)=\text{clip}\left(\frac{K(t)-K_0}{K_1-K_0},,0,,1\right)
+}
+]
+
+With defaults (K_0=3), (K_1=5):
+
+* Kp ≤ 4 → 0
+* Kp ≥ 5 → 1
+
+(You can later calibrate (K_0,K_1) per location using keogram validation.)
+
+---
+
+# 3) Hourly visibility score
+
+For each row/hour:
+
+[
+\boxed{
+S(t)= D(t)\times F_{\text{cloud}}(t)\times F_{\text{moon}}(t)\times F_{\text{kp}}(t)
+}
+]
+
+
+
+# 4) Night-level aggregation (what you likely want for travel planning)
+
+For each location and each “night” (group by date in local time or by a chosen night-id), aggregate over the night hours (\mathcal{T}).
+
+Two standard choices:
+
+### Option 1 — Mean of hourly scores (recommended)
+
+[
+\boxed{
+S_{\text{night}}=\frac{1}{|\mathcal{T}|}\sum_{t\in\mathcal{T}} S(t)
+}
+]
+
+Interpretation: expected average favorability across the observing window.
+
+
+# 5) Handling your `<NA>` rows
+
+You already have `<NA>` for moon fields in non-night hours (and even possibly some night hours).
+
+Recommended rule:
+
+* If `is_night=False`: you do not care; score is 0 anyway.
+* If `is_night=True` and `moon_altitude_deg` or `moon_illumination` is missing:
+
+  * conservative: set (F_{\text{moon}}(t)=0.8) (mild penalty), **or**
+  * neutral: set (F_{\text{moon}}(t)=1) and flag it for later QA.
+
+I recommend **neutral + QA flag** initially, to avoid injecting artificial bias.
+
+---
+
+| Night duration    | Total dark hours within night window |
+| Cloud coverage    | Mean or % clear sky during night     |
+| Kp index          | Mean or max Kp during night          |
+
+| Moon illumination | Lunar phase fraction [0–1]           |
+| Moon altitude     | Mean or max altitude during night    |
+| Location ID       | City / site identifier               |
